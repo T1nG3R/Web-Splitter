@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSplitter — Split any file in your browser</title>
+    <meta
+      name="description"
+      content="Free, private, client-side file splitter. Split any file into chunks compatible with 7-Zip and other archive tools. No uploads, no server."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Unsupported browser banner -->
+    <div id="compat-banner" class="compat-banner hidden">
+      ⚠️ Your browser does not support the File API required by this app. Please
+      use a modern browser (Chrome 57+, Firefox 55+, Edge 79+, Safari 10.1+).
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <header class="header">
+      <div class="header-inner">
+        <span class="logo">✂ WebSplitter</span>
+        <a
+          class="header-link"
+          href="https://github.com"
+          target="_blank"
+          rel="noopener"
+          >GitHub ↗</a
+        >
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Drop Zone -->
+      <section
+        class="card"
+        id="drop-zone"
+        role="button"
+        aria-label="File drop zone. Click or drag a file here."
+      >
+        <input
+          type="file"
+          id="file-input"
+          class="file-input"
+          aria-hidden="true"
+        />
+        <div class="drop-zone-content">
+          <div class="drop-icon">📂</div>
+          <p class="drop-primary">Drag &amp; drop a file here</p>
+          <p class="drop-secondary">
+            or <span class="drop-link">click to browse</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- File Info -->
+      <section class="card file-info hidden" id="file-info" aria-live="polite">
+        <span class="file-icon">📄</span>
+        <div class="file-details">
+          <span class="file-name" id="file-name">—</span>
+          <span class="file-size" id="file-size">—</span>
+        </div>
+        <button
+          class="clear-btn"
+          id="clear-file-btn"
+          aria-label="Remove selected file"
+        >
+          ✕
+        </button>
+      </section>
+
+      <!-- Chunk Size -->
+      <section class="card">
+        <h2 class="section-title">Chunk Size</h2>
+        <div class="chunk-size-row">
+          <input
+            type="number"
+            id="chunk-size-number"
+            class="chunk-number-input"
+            value="2"
+            min="1"
+            aria-label="Chunk size value"
+          />
+          <select
+            id="chunk-size-unit"
+            class="chunk-unit-select"
+            aria-label="Chunk size unit"
+          >
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB" selected>GB</option>
+          </select>
+        </div>
+        <div class="chunk-size-message hidden" id="chunk-size-message"></div>
+        <div class="presets">
+          <button
+            class="preset-btn"
+            data-value="700"
+            data-unit="MB"
+            id="preset-700mb"
+          >
+            700 MB <span class="preset-label">CD</span>
+          </button>
+          <button
+            class="preset-btn"
+            data-value="1"
+            data-unit="GB"
+            id="preset-1gb"
+          >
+            1 GB
+          </button>
+          <button
+            class="preset-btn active"
+            data-value="2"
+            data-unit="GB"
+            id="preset-2gb"
+          >
+            2 GB <span class="preset-label">Default</span>
+          </button>
+          <button
+            class="preset-btn"
+            data-value="4"
+            data-unit="GB"
+            id="preset-4gb"
+          >
+            4 GB <span class="preset-label">FAT32</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Naming Convention -->
+      <section class="card">
+        <h2 class="section-title">Naming Convention</h2>
+        <div class="naming-options">
+          <label class="naming-label" for="naming-7zip">
+            <input
+              type="radio"
+              id="naming-7zip"
+              name="naming"
+              value="7zip"
+              checked
+            />
+            <span class="naming-text">
+              <span class="naming-name">7-Zip style</span>
+              <span class="naming-example">.001, .002, …</span>
+            </span>
+          </label>
+          <label class="naming-label" for="naming-part">
+            <input type="radio" id="naming-part" name="naming" value="part" />
+            <span class="naming-text">
+              <span class="naming-name">Part style</span>
+              <span class="naming-example">.part001, .part002, …</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Split Button -->
+      <button class="split-btn" id="split-btn" disabled aria-disabled="true">
+        ✂ Split File
+      </button>
+
+      <!-- Progress -->
+      <section class="card hidden" id="progress-section" aria-live="polite">
+        <h2 class="section-title">Progress</h2>
+        <div class="progress-bar-track">
+          <div
+            class="progress-bar-fill"
+            id="progress-bar-fill"
+            style="width: 0%"
+          ></div>
+        </div>
+        <p class="progress-label" id="progress-label">Preparing…</p>
+      </section>
+
+      <!-- Chunk List -->
+      <section class="card hidden" id="chunk-list-section">
+        <div class="chunk-list-header">
+          <h2 class="section-title">Chunks</h2>
+          <button class="restart-btn" id="restart-btn">
+            ▶ Restart Auto-Download
+          </button>
+        </div>
+        <ul
+          class="chunk-list"
+          id="chunk-list"
+          aria-label="Generated chunks"
+        ></ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        All processing happens locally in your browser. Your files are never
+        uploaded.
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
