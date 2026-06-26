@@ -16,7 +16,8 @@ export function getChunkName(fileName, index, totalChunks, convention) {
 
 // Async generator that yields one sliced chunk at a time to minimize memory usage
 export async function* chunkBytes(file, chunkSize) {
-  if (chunkSize <= 0) throw new RangeError("chunkSize must be > 0");
+  if (!Number.isFinite(chunkSize) || chunkSize <= 0)
+    throw new RangeError("chunkSize must be a finite number > 0");
   const total = Math.ceil(file.size / chunkSize);
   for (let i = 0; i < total; i++) {
     const start = i * chunkSize;
