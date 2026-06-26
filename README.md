@@ -33,7 +33,7 @@ Requires File API + Blob.slice() + URL.createObjectURL() — supported in Chrome
 ## Deploy to GitHub Pages
 
 1. Push this repo to GitHub
-2. Go to **Settings → Pages → Source → Deploy from branch → main / (root)**
+2. Go to **Settings → Pages → Source → Deploy from branch → master / (root)**
 3. Your app will be live at `https://t1ng3r.github.io/Web-Splitter/`
 
 ## Development
