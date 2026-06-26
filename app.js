@@ -40,7 +40,7 @@ if (!window.File || !window.FileReader || !Blob.prototype.slice) {
 }
 
 // Helpers
-export function formatBytes(bytes) {
+function formatBytes(bytes) {
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -50,14 +50,14 @@ export function formatBytes(bytes) {
 
 const UNIT_MULTIPLIERS = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 };
 
-export function getChunkSizeBytes() {
+function getChunkSizeBytes() {
   const num = parseFloat(chunkNumInput.value);
   const unit = chunkUnitSel.value;
   if (isNaN(num) || num <= 0) return 0;
   return Math.floor(num * UNIT_MULTIPLIERS[unit]);
 }
 
-export function validateChunkSize() {
+function validateChunkSize() {
   const bytes = getChunkSizeBytes();
   chunkMsgEl.className = "chunk-size-message";
 
@@ -89,7 +89,7 @@ export function validateChunkSize() {
 }
 
 // Toast
-export function showToast(message, type = "info", durationMs = 6000) {
+function showToast(message, type = "info", durationMs = 6000) {
   const el = document.createElement("div");
   el.className = `toast${type === "warning" ? " warning" : ""}`;
   el.textContent = message;
@@ -218,38 +218,152 @@ function resetSplitState() {
   splitBtn.textContent = "✂ Split File";
 }
 
-// Expose for Task 4 (splitting logic)
-export {
-  state,
-  dropZone,
-  fileInput,
-  fileInfo,
-  fileNameEl,
-  fileSizeEl,
-  chunkNumInput,
-  chunkUnitSel,
-  presetBtns,
-  naming7zip,
-  namingPart,
-  splitBtn,
-  progressSect,
-  progressFill,
-  progressLabel,
-  chunkListSect,
-  chunkListEl,
-  restartBtn,
-  toastContainer,
-  resetSplitState,
-  loadFile,
-  clearFile,
-  showToast,
-  getChunkName,
-  chunkBytes,
-};
+// Chunk List UI helpers
+function addChunkRow(name, index) {
+  const li = document.createElement("li");
+  li.className = "chunk-item";
+  li.id = `chunk-row-${index}`;
+  li.innerHTML = `
+    <span class="chunk-status" id="chunk-status-${index}">⏳</span>
+    <span class="chunk-name">${name}</span>
+    <button class="chunk-download-btn" id="chunk-dl-${index}" disabled aria-label="Download ${name}">↓</button>
+  `;
+  chunkListEl.appendChild(li);
+}
 
-// URL cleanup
+function markChunkDone(index, url, name) {
+  const row = document.getElementById(`chunk-row-${index}`);
+  const status = document.getElementById(`chunk-status-${index}`);
+  const dlBtn = document.getElementById(`chunk-dl-${index}`);
+  if (row) row.classList.add("done");
+  if (status) status.textContent = "✅";
+  if (dlBtn) {
+    dlBtn.disabled = false;
+    dlBtn.addEventListener("click", () => triggerDownload(url, name));
+  }
+}
+
+function triggerDownload(url, name) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// Sequential auto-download
+const DOWNLOAD_DELAY_MS = 300;
+
+async function autoDownloadAll(startIndex = 0) {
+  for (let i = startIndex; i < state.chunks.length; i++) {
+    const chunk = state.chunks[i];
+    if (!chunk.url) continue; // not ready yet (shouldn't happen in restart flow)
+    triggerDownload(chunk.url, chunk.name);
+    await new Promise((r) => setTimeout(r, DOWNLOAD_DELAY_MS));
+  }
+}
+
+// Main split function
+async function startSplit() {
+  if (!state.file || state.isSplitting) return;
+
+  const chunkSize = getChunkSizeBytes();
+  if (chunkSize <= 0) return;
+
+  // Setup
+  state.isSplitting = true;
+  state.chunks = [];
+  chunkListEl.innerHTML = "";
+  progressSect.classList.remove("hidden");
+  chunkListSect.classList.remove("hidden");
+  setSplitBtnDisabled(true);
+  splitBtn.textContent = "Splitting…";
+
+  const fileName = state.file.name;
+  const convention = state.convention;
+
+  // Pre-compute total chunks to build the list upfront
+  const total = Math.ceil(state.file.size / chunkSize);
+
+  // Pre-populate chunk rows with pending status
+  for (let i = 0; i < total; i++) {
+    const name = getChunkName(fileName, i, total, convention);
+    state.chunks.push({ name, url: null, done: false });
+    addChunkRow(name, i);
+  }
+
+  progressLabel.textContent = `Preparing ${total} chunk${total > 1 ? "s" : ""}…`;
+
+  let downloadBlocked = false;
+
+  try {
+    for await (const { blob, index } of chunkBytes(state.file, chunkSize)) {
+      const name = state.chunks[index].name;
+      const url = URL.createObjectURL(blob);
+      state.chunks[index].url = url;
+      state.chunks[index].done = true;
+      markChunkDone(index, url, name);
+
+      // Update progress
+      const pct = Math.round(((index + 1) / total) * 100);
+      progressFill.style.width = `${pct}%`;
+      progressLabel.textContent = `Downloading ${index + 1} of ${total}: ${name}`;
+
+      // Auto-download this chunk
+      if (!downloadBlocked) {
+        try {
+          triggerDownload(url, name);
+        } catch {
+          downloadBlocked = true;
+        }
+        // Detect if download was blocked (heuristic: check after short delay)
+        await new Promise((r) => setTimeout(r, DOWNLOAD_DELAY_MS));
+      }
+
+      // Revoke URL after a delay to allow download to start
+      setTimeout(() => {
+        // Keep URL for manual re-download — do NOT revoke here
+        // URLs are revoked when user navigates away or resets
+      }, 1000);
+    }
+
+    progressLabel.textContent = `✅ Done! ${total} chunk${total > 1 ? "s" : ""} ready.`;
+    progressFill.style.width = "100%";
+
+    if (downloadBlocked) {
+      showToast(
+        "Downloads were blocked by your browser. Use the ↓ buttons to download chunks manually.",
+        "warning",
+        10000,
+      );
+    }
+  } catch (err) {
+    showToast(`Error during split: ${err.message}`, "warning");
+    progressLabel.textContent = "⚠️ Split failed. Please try again.";
+  } finally {
+    state.isSplitting = false;
+    splitBtn.disabled = false;
+    splitBtn.textContent = "✂ Split File";
+  }
+}
+
+// Revoke all chunk URLs (cleanup)
 function revokeAllUrls() {
   state.chunks.forEach((c) => {
     if (c.url) URL.revokeObjectURL(c.url);
   });
 }
+window.addEventListener("beforeunload", revokeAllUrls);
+
+// Event: Split button
+splitBtn.addEventListener("click", startSplit);
+
+// Event: Restart auto-download
+restartBtn.addEventListener("click", () => {
+  if (state.chunks.length === 0) return;
+  autoDownloadAll(0);
+});
+
+// Initial validation
+validateChunkSize();
