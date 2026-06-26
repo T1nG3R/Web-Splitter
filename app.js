@@ -295,8 +295,6 @@ async function startSplit() {
 
   progressLabel.textContent = `Preparing ${total} chunk${total > 1 ? "s" : ""}…`;
 
-  let downloadBlocked = false;
-
   try {
     for await (const { blob, index } of chunkBytes(state.file, chunkSize)) {
       const name = state.chunks[index].name;
@@ -311,33 +309,18 @@ async function startSplit() {
       progressLabel.textContent = `Downloading ${index + 1} of ${total}: ${name}`;
 
       // Auto-download this chunk
-      if (!downloadBlocked) {
-        try {
-          triggerDownload(url, name);
-        } catch {
-          downloadBlocked = true;
-        }
-        // Detect if download was blocked (heuristic: check after short delay)
-        await new Promise((r) => setTimeout(r, DOWNLOAD_DELAY_MS));
-      }
-
-      // Revoke URL after a delay to allow download to start
-      setTimeout(() => {
-        // Keep URL for manual re-download — do NOT revoke here
-        // URLs are revoked when user navigates away or resets
-      }, 1000);
+      triggerDownload(url, name);
+      await new Promise((r) => setTimeout(r, DOWNLOAD_DELAY_MS));
     }
 
     progressLabel.textContent = `✅ Done! ${total} chunk${total > 1 ? "s" : ""} ready.`;
     progressFill.style.width = "100%";
 
-    if (downloadBlocked) {
-      showToast(
-        "Downloads were blocked by your browser. Use the ↓ buttons to download chunks manually.",
-        "warning",
-        10000,
-      );
-    }
+    showToast(
+      "If any downloads were blocked by your browser, use the ↓ buttons to re-download them.",
+      "info",
+      8000,
+    );
   } catch (err) {
     showToast(`Error during split: ${err.message}`, "warning");
     progressLabel.textContent = "⚠️ Split failed. Please try again.";
