@@ -155,7 +155,13 @@ dropZone.addEventListener("drop", (e) => {
   const file = e.dataTransfer?.files?.[0];
   if (file) loadFile(file);
 });
-dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("click", (e) => {
+  // If the user clicked the actual hidden input element, let it happen naturally.
+  // Otherwise, programmatically click it.
+  if (e.target !== fileInput) {
+    fileInput.click();
+  }
+});
 dropZone.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
