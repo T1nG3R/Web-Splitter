@@ -57,6 +57,12 @@ function getChunkSizeBytes() {
   return Math.floor(num * UNIT_MULTIPLIERS[unit]);
 }
 
+// Accessibility helper
+function setSplitBtnDisabled(disabled) {
+  splitBtn.disabled = disabled;
+  splitBtn.setAttribute("aria-disabled", String(disabled));
+}
+
 function validateChunkSize() {
   const bytes = getChunkSizeBytes();
   chunkMsgEl.className = "chunk-size-message";
@@ -79,13 +85,13 @@ function validateChunkSize() {
     chunkMsgEl.textContent = `Chunk size exceeds file size — file will be downloaded as a single chunk.`;
     chunkMsgEl.classList.add("warning");
     chunkMsgEl.classList.remove("hidden");
-    splitBtn.disabled = !state.file;
+    setSplitBtnDisabled(!state.file);
     return;
   }
 
   chunkMsgEl.classList.add("hidden");
   chunkMsgEl.textContent = "";
-  splitBtn.disabled = !state.file;
+  setSplitBtnDisabled(!state.file);
 }
 
 // Toast
@@ -139,9 +145,10 @@ dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
   dropZone.classList.add("dragover");
 });
-dropZone.addEventListener("dragleave", () =>
-  dropZone.classList.remove("dragover"),
-);
+dropZone.addEventListener("dragleave", (e) => {
+  if (dropZone.contains(e.relatedTarget)) return;
+  dropZone.classList.remove("dragover");
+});
 dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("dragover");
@@ -214,7 +221,7 @@ function resetSplitState() {
   chunkListEl.innerHTML = "";
   progressFill.style.width = "0%";
   progressLabel.textContent = "Preparing…";
-  splitBtn.disabled = !state.file;
+  setSplitBtnDisabled(!state.file);
   splitBtn.textContent = "✂ Split File";
 }
 
@@ -223,11 +230,26 @@ function addChunkRow(name, index) {
   const li = document.createElement("li");
   li.className = "chunk-item";
   li.id = `chunk-row-${index}`;
-  li.innerHTML = `
-    <span class="chunk-status" id="chunk-status-${index}">⏳</span>
-    <span class="chunk-name">${name}</span>
-    <button class="chunk-download-btn" id="chunk-dl-${index}" disabled aria-label="Download ${name}">↓</button>
-  `;
+
+  const statusSpan = document.createElement("span");
+  statusSpan.className = "chunk-status";
+  statusSpan.id = `chunk-status-${index}`;
+  statusSpan.textContent = "⏳";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "chunk-name";
+  nameSpan.textContent = name;
+
+  const dlBtn = document.createElement("button");
+  dlBtn.className = "chunk-download-btn";
+  dlBtn.id = `chunk-dl-${index}`;
+  dlBtn.disabled = true;
+  dlBtn.setAttribute("aria-label", `Download ${name}`);
+  dlBtn.textContent = "↓";
+
+  li.appendChild(statusSpan);
+  li.appendChild(nameSpan);
+  li.appendChild(dlBtn);
   chunkListEl.appendChild(li);
 }
 
@@ -326,7 +348,7 @@ async function startSplit() {
     progressLabel.textContent = "⚠️ Split failed. Please try again.";
   } finally {
     state.isSplitting = false;
-    splitBtn.disabled = false;
+    setSplitBtnDisabled(!state.file);
     splitBtn.textContent = "✂ Split File";
   }
 }
