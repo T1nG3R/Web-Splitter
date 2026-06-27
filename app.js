@@ -8,6 +8,7 @@ const state = {
   isSplitting: false,
   chunks: [], // Array of { name, url, done }
   abortController: null,
+  useDecimal: true,
 };
 
 // DOM refs
@@ -21,6 +22,7 @@ const chunkNumInput = document.getElementById("chunk-size-number");
 const chunkUnitSel = document.getElementById("chunk-size-unit");
 const chunkMsgEl = document.getElementById("chunk-size-message");
 const presetBtns = document.querySelectorAll(".preset-btn");
+const decimalToggle = document.getElementById("unit-decimal-toggle");
 const naming7zip = document.getElementById("naming-7zip");
 const namingPart = document.getElementById("naming-part");
 const splitBtn = document.getElementById("split-btn");
@@ -42,19 +44,31 @@ if (!window.File || !window.FileReader || !Blob.prototype.slice) {
 // Helpers
 function formatBytes(bytes) {
   if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const val = bytes / Math.pow(1024, i);
+  const decimalUnits = ["B", "KB", "MB", "GB", "TB"];
+  const binaryUnits = ["B", "KiB", "MiB", "GiB", "TiB"];
+  const units = state.useDecimal ? decimalUnits : binaryUnits;
+  const base = state.useDecimal ? 1000 : 1024;
+  const i = Math.floor(Math.log(bytes) / Math.log(base));
+  const val = bytes / Math.pow(base, i);
   return `${val % 1 === 0 ? val : val.toFixed(2)} ${units[i]}`;
 }
 
-const UNIT_MULTIPLIERS = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 };
+function getUnitMultipliers() {
+  const base = state.useDecimal ? 1000 : 1024;
+  return {
+    B: 1,
+    KB: base,
+    MB: base ** 2,
+    GB: base ** 3,
+  };
+}
 
 function getChunkSizeBytes() {
   const num = parseFloat(chunkNumInput.value);
   const unit = chunkUnitSel.value;
   if (isNaN(num) || num <= 0) return 0;
-  return Math.floor(num * UNIT_MULTIPLIERS[unit]);
+  const multipliers = getUnitMultipliers();
+  return Math.floor(num * multipliers[unit]);
 }
 
 // Accessibility helper
@@ -195,6 +209,38 @@ function clearActivePreset() {
   presetBtns.forEach((btn) => btn.classList.remove("active"));
 }
 
+function updateUnitLabels() {
+  const isDec = state.useDecimal;
+  
+  // 1. Update dropdown select option text
+  const base = isDec ? "" : "i";
+  for (let i = 0; i < chunkUnitSel.options.length; i++) {
+    const opt = chunkUnitSel.options[i];
+    if (opt.value === "B") continue;
+    opt.textContent = opt.value.replace("B", base + "B");
+  }
+
+  // 2. Update presets button labels
+  const presetTextsMap = {
+    "preset-700mb": isDec ? "700 MB" : "700 MiB",
+    "preset-1gb": isDec ? "1 GB" : "1 GiB",
+    "preset-2gb": isDec ? "2 GB" : "2 GiB",
+    "preset-4gb": isDec ? "4 GB" : "4 GiB",
+  };
+
+  presetBtns.forEach((btn) => {
+    const labelSpan = btn.querySelector(".preset-label");
+    const labelHtml = labelSpan ? labelSpan.outerHTML : "";
+    const textBase = presetTextsMap[btn.id] || btn.textContent;
+    btn.innerHTML = `${textBase}${labelHtml ? " " + labelHtml : ""}`;
+  });
+
+  // 3. Update File size display if a file is loaded
+  if (state.file) {
+    fileSizeEl.textContent = formatBytes(state.file.size);
+  }
+}
+
 presetBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
     chunkNumInput.value = btn.dataset.value;
@@ -203,6 +249,12 @@ presetBtns.forEach((btn) => {
     btn.classList.add("active");
     validateChunkSize();
   });
+});
+
+decimalToggle.addEventListener("change", () => {
+  state.useDecimal = decimalToggle.checked;
+  updateUnitLabels();
+  validateChunkSize();
 });
 
 // Naming convention events

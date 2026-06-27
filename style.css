@@ -372,6 +372,31 @@ body {
   background: rgba(124, 77, 255, 0.2);
 }
 
+.decimal-toggle-container {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+.decimal-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  user-select: none;
+  transition: color var(--transition);
+}
+.decimal-toggle-label:hover {
+  color: var(--text-primary);
+}
+.decimal-toggle-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* Naming Convention */
 .naming-options {
   display: flex;
