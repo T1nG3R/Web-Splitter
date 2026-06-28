@@ -137,6 +137,7 @@ function loadFile(file) {
   fileInfo.title = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
   fileInfo.classList.remove("hidden");
+  dropZone.classList.add("hidden");
   validateChunkSize();
   updateInstructions();
 }
@@ -152,6 +153,7 @@ function clearFile() {
   state.file = null;
   fileInput.value = "";
   fileInfo.classList.add("hidden");
+  dropZone.classList.remove("hidden");
   fileNameEl.textContent = "—";
   fileNameEl.removeAttribute("title");
   fileInfo.removeAttribute("title");
