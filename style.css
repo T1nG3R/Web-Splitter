@@ -840,6 +840,23 @@ body {
     margin: 0;
     padding: 12px 14px;
     overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) rgba(0, 0, 0, 0.2);
+}
+.code-snippet-group pre::-webkit-scrollbar {
+    height: 6px;
+}
+.code-snippet-group pre::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-sm);
+}
+.code-snippet-group pre::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.code-snippet-group pre::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-light);
 }
 .code-snippet-group code {
     font-family: "Courier New", monospace;
