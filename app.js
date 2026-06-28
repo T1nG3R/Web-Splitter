@@ -138,6 +138,7 @@ function loadFile(file) {
   fileSizeEl.textContent = formatBytes(file.size);
   fileInfo.classList.remove("hidden");
   validateChunkSize();
+  updateInstructions();
 }
 
 function clearFile() {
@@ -156,6 +157,7 @@ function clearFile() {
   fileInfo.removeAttribute("title");
   fileSizeEl.textContent = "—";
   validateChunkSize();
+  updateInstructions();
 }
 
 // Drop Zone events
@@ -211,7 +213,7 @@ function clearActivePreset() {
 
 function updateUnitLabels() {
   const isDec = state.useDecimal;
-  
+
   // 1. Update dropdown select option text
   const base = isDec ? "" : "i";
   for (let i = 0; i < chunkUnitSel.options.length; i++) {
@@ -260,9 +262,11 @@ decimalToggle.addEventListener("change", () => {
 // Naming convention events
 naming7zip.addEventListener("change", () => {
   state.convention = "7zip";
+  updateInstructions();
 });
 namingPart.addEventListener("change", () => {
   state.convention = "part";
+  updateInstructions();
 });
 
 // beforeunload guard
@@ -432,5 +436,50 @@ restartBtn.addEventListener("click", () => {
   autoDownloadAll(0);
 });
 
-// Initial validation
+// Update instructions text dynamically based on loaded file & options
+function updateInstructions() {
+  const filename = state.file ? state.file.name : "archive.zip";
+  const suffix = state.convention === "7zip" ? "00" : "part";
+
+  const cmdWindows = document.getElementById("cmd-windows");
+  const pwshWindows = document.getElementById("powershell-windows");
+  const bashUnix = document.getElementById("bash-unix");
+
+  if (cmdWindows) {
+    cmdWindows.textContent = `copy /b "${filename}.${suffix}*" "${filename}"`;
+  }
+  if (pwshWindows) {
+    pwshWindows.textContent = `cmd /c 'copy /b "${filename}.${suffix}*" "${filename}"'`;
+  }
+  if (bashUnix) {
+    bashUnix.textContent = `cat "${filename}.${suffix}"* > "${filename}"`;
+  }
+}
+
+// Copy snippet event listener
+document.querySelectorAll(".copy-code-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.dataset.target;
+    const codeEl = document.getElementById(targetId);
+    if (!codeEl) return;
+
+    navigator.clipboard
+      .writeText(codeEl.textContent)
+      .then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove("copied");
+        }, 2000);
+      })
+      .catch(() => {
+        showToast("Failed to copy code snippet.", "warning");
+      });
+  });
+});
+
+// Initial validation & load
 validateChunkSize();
+updateInstructions();
