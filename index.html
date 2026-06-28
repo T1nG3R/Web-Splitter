@@ -276,14 +276,22 @@
                         can rejoin them easily:
                     </p>
 
-                    <h4>Method 1: Using 7-Zip or another file archiver</h4>
+                    <h4>
+                        Method 1: Using 7-Zip or another file archiver (7-Zip
+                        style only)
+                    </h4>
                     <p>
-                        Right-click the first file (e.g., <code>.001</code> or
-                        <code>.part001</code>) and extract this file using your
-                        file archiver to reconstruct the original file. You
-                        <strong>don't need</strong> to extract any other parts
-                        as they are concatenated by the file archiver
-                        automatically.
+                        If you used the default
+                        <strong>7-Zip style</strong> naming, you can right-click
+                        the first file (ending in <code>.001</code>) and extract
+                        it using your file archiver to reconstruct the original
+                        file. You <strong>don't need</strong> to extract any
+                        other parts as they are combined automatically.
+                        <em
+                            >(Note: Part style naming is not supported by 7-Zip;
+                            please use the command-line method below
+                            instead).</em
+                        >
                     </p>
 
                     <h4>Method 2: Command Line (Fastest)</h4>
